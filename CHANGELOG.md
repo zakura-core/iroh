@@ -4,6 +4,10 @@ All notable changes to iroh will be documented in this file.
 
 ## Unreleased
 
+- Allow `max_remote_nat_traversal_addresses(0)` to disable NAT traversal,
+  including candidate-address exchange and peer-directed UDP probes, in
+  `1.1.0-rc.1`. Direct connections remain available.
+
 - Prepare the four Zakura compatibility crates at `1.1.0-rc.0`, retaining the
   original Rust library names and published Dalek dependencies.
 - Pin relay LRU to `0.18.3` so fresh consumers avoid `0.18.4`'s faulty `retain`

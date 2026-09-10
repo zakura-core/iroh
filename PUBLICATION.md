@@ -7,7 +7,7 @@ Rust source or modifying the checkout. It cannot publish anything.
 
 ## Proposed packages
 
-All four packages use `1.1.0-rc.0`, derived from upstream Iroh 1.1.0. Publish in
+All four packages use `1.1.0-rc.1`, derived from upstream Iroh 1.1.0. Publish in
 this dependency order only after explicit approval:
 
 1. `zakura-iroh-base`
@@ -28,8 +28,8 @@ lockfile cannot select 0.18.4's faulty `retain` implementation.
 Run with Python 3.12 or newer, using a destination that does not already exist:
 
 ```sh
-python3 scripts/prepare-zakura-packages.py --revision HEAD --output /tmp/zakura-iroh-rc0
-cd /tmp/zakura-iroh-rc0
+python3 scripts/prepare-zakura-packages.py --revision HEAD --output /tmp/zakura-iroh-rc1
+cd /tmp/zakura-iroh-rc1
 cargo metadata --format-version 1 > metadata.json
 cargo package -p zakura-iroh-base -p zakura-iroh-dns -p zakura-iroh-relay -p zakura-iroh
 ```
@@ -48,10 +48,9 @@ Check that BIP32 and the Zcash cryptographic dependency versions remain unchange
 
 ## Before publication
 
-The proposed names were absent from the registry when preparation began. Name
-availability is not a reservation and must be rechecked immediately before an
-authorized publication. Configure approved maintainers and publishing credentials
-then. Preparation does not authorize a registry upload or a release tag.
+The four package names are already owned and `1.1.0-rc.0` is published.
+Recheck version availability and owners before an authorized publication.
+Preparation does not authorize a registry upload or a release tag.
 
 Archive validation does not replace cargo-vet coverage of the new dependency
 graph, review of authentication compatibility, or full-node interoperability
