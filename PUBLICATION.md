@@ -7,7 +7,7 @@ Rust source or modifying the checkout. It cannot publish anything.
 
 ## Proposed packages
 
-All four packages use `1.1.0-rc.1`, derived from upstream Iroh 1.1.0. Publish in
+All four packages use `1.1.0-rc.0`, derived from upstream Iroh 1.1.0. Publish in
 this dependency order only after explicit approval:
 
 1. `zakura-iroh-base`
@@ -20,14 +20,16 @@ The DNS server and benchmark packages are outside this set and are marked
 authorship are retained. Public library names and dependency aliases remain
 `iroh`, `iroh_base`, `iroh_dns`, and `iroh_relay`; package names identify the fork.
 The manifests keep upstream noq 1.2 and published Dalek dependencies.
+The relay package pins LRU to 0.18.3 so consumers without this workspace
+lockfile cannot select 0.18.4's faulty `retain` implementation.
 
 ## Prepare and verify
 
 Run with Python 3.12 or newer, using a destination that does not already exist:
 
 ```sh
-python3 scripts/prepare-zakura-packages.py --revision HEAD --output /tmp/zakura-iroh-rc1
-cd /tmp/zakura-iroh-rc1
+python3 scripts/prepare-zakura-packages.py --revision HEAD --output /tmp/zakura-iroh-rc0
+cd /tmp/zakura-iroh-rc0
 cargo metadata --format-version 1 > metadata.json
 cargo package -p zakura-iroh-base -p zakura-iroh-dns -p zakura-iroh-relay -p zakura-iroh
 ```
