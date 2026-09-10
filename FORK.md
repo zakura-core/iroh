@@ -7,7 +7,8 @@ exact prerelease digest dependencies can resolve Iroh without changing their
 cryptographic packages. The compatibility change consists of three dependency
 requirements and the lockfile; production Rust source is unchanged. Additional
 tests and preparation tooling validate the fork. The Curve25519 minimum retains
-the timing fix released in 4.1.3.
+the timing fix released in 4.1.3. The relay manifest also pins LRU to 0.18.3
+to keep fresh consumers off 0.18.4's faulty `retain` implementation.
 
 ## Consumption
 
@@ -16,7 +17,7 @@ Pin this branch's exact reviewed commit in the consuming workspace's root
 Keep normal registry version requirements in dependency declarations.
 A dependency's patch table is not inherited by downstream applications.
 This is a source integration branch; no registry packages are published.
-The proposed registry package names, reproducible staging command and consumer
+The `1.1.0-rc.0` registry package names, reproducible staging command and consumer
 wiring are documented in [PUBLICATION.md](PUBLICATION.md). Publication remains
 blocked until the audit and compatibility gates pass and an operator explicitly
 authorizes the prepared package set.

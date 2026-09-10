@@ -42,7 +42,7 @@ def prepare(repo, revision, output, version):
                 readme.write_text(
                     "> This is the Zakura compatibility fork of Iroh 1.1.0. It retains "
                     "published Dalek 2.2 and Curve25519-Dalek 4.1.3. "
-                    "See https://github.com/zakura-core/iroh/blob/adam/dalek-compat-1.1/FORK.md.\n\n"
+                    "See https://github.com/zakura-core/iroh/blob/zakura/v1.1.0/FORK.md.\n\n"
                     + readme.read_text())
             library = name.replace("-", "_")
             if "[lib]" in content:
@@ -84,9 +84,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default="HEAD")
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--version", default="1.1.0-rc.1")
+    parser.add_argument("--version", default="1.1.0-rc.0")
     args = parser.parse_args()
-    if not re.fullmatch(r"1\.1\.0-rc\.[1-9][0-9]*", args.version):
+    if not re.fullmatch(r"1\.1\.0-rc\.(0|[1-9][0-9]*)", args.version):
         parser.error("version must be an explicit 1.1.0 release candidate")
     prepare(Path(__file__).resolve().parents[1], args.revision, args.output.resolve(), args.version)
 

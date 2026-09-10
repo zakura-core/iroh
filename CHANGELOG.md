@@ -2,6 +2,13 @@
 
 All notable changes to iroh will be documented in this file.
 
+## Unreleased
+
+- Prepare the four Zakura compatibility crates at `1.1.0-rc.0`, retaining the
+  original Rust library names and published Dalek dependencies.
+- Pin relay LRU to `0.18.3` so fresh consumers avoid `0.18.4`'s faulty `retain`
+  implementation.
+
 ## [1.1.0](https://github.com/n0-computer/iroh/compare/v1.0.3..1.1.0) - 2026-08-25
 
 ### ⛰️  Features
