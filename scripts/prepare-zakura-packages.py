@@ -84,7 +84,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default="HEAD")
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--version", default="1.1.0-rc.0")
+    parser.add_argument("--version", default="1.1.0-rc.1")
     args = parser.parse_args()
     if not re.fullmatch(r"1\.1\.0-rc\.(0|[1-9][0-9]*)", args.version):
         parser.error("version must be an explicit 1.1.0 release candidate")

@@ -1341,6 +1341,90 @@ mod tests {
 
     const TEST_ALPN: &[u8] = b"n0/iroh/test";
 
+    #[tokio::test]
+    async fn nat_traversal_can_be_disabled_by_either_endpoint() -> Result {
+        tokio::time::timeout(Duration::from_secs(20), async {
+            // Keep an enabled control so a broken negotiation cannot make the test pass.
+            for (server_max, client_max) in [(32, 32), (0, 32), (32, 0), (0, 0)] {
+                async fn endpoint(max_addresses: u8) -> Result<Endpoint> {
+                    Ok(Endpoint::builder(presets::Minimal)
+                        .relay_mode(RelayMode::Disabled)
+                        .clear_address_lookup()
+                        .clear_ip_transports()
+                        .bind_addr("127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap())?
+                        .alpns(vec![TEST_ALPN.to_vec()])
+                        .transport_config(
+                            crate::endpoint::QuicTransportConfig::builder()
+                                .max_remote_nat_traversal_addresses(max_addresses)
+                                .build(),
+                        )
+                        .bind()
+                        .await?)
+                }
+                let server = endpoint(server_max).await?;
+                let client = endpoint(client_max).await?;
+                let (accepted, connected) = tokio::join!(
+                    async { server.accept().await.unwrap().await },
+                    client.connect(server.addr(), TEST_ALPN),
+                );
+                let accepted = accepted?;
+                let connected = connected?;
+                let enabled = server_max != 0 && client_max != 0;
+                for connection in [&accepted, &connected] {
+                    let addresses = connection.inner.get_local_nat_traversal_addresses();
+                    if enabled {
+                        assert!(addresses.is_ok());
+                    } else {
+                        assert!(matches!(
+                            addresses,
+                            Err(noq_proto::n0_nat_traversal::Error::ExtensionNotNegotiated)
+                        ));
+                        assert!(matches!(
+                            connection
+                                .inner
+                                .add_nat_traversal_address("127.0.0.1:12345".parse().unwrap()),
+                            Err(noq_proto::n0_nat_traversal::Error::ExtensionNotNegotiated)
+                        ));
+                    }
+                }
+                let (sent, received) = tokio::join!(
+                    async {
+                        let mut stream = connected
+                            .open_uni()
+                            .await
+                            .std_context("open direct stream")?;
+                        stream
+                            .write_all(b"direct transfer")
+                            .await
+                            .std_context("write direct stream")?;
+                        stream.finish().std_context("finish direct stream")?;
+                        Ok::<_, n0_error::AnyError>(())
+                    },
+                    async {
+                        let mut stream = accepted
+                            .accept_uni()
+                            .await
+                            .std_context("accept direct stream")?;
+                        let payload = stream
+                            .read_to_end(64)
+                            .await
+                            .std_context("read direct stream")?;
+                        assert_eq!(payload, b"direct transfer");
+                        Ok::<_, n0_error::AnyError>(())
+                    }
+                );
+                sent?;
+                received?;
+                accepted.close(0u32.into(), b"done");
+                client.close().await;
+                server.close().await;
+            }
+            Ok(())
+        })
+        .await
+        .expect("NAT traversal negotiation test timed out")
+    }
+
     async fn spawn_0rtt_server(secret_key: SecretKey, log_span: tracing::Span) -> Result<Endpoint> {
         let server = Endpoint::builder(presets::Minimal)
             .secret_key(secret_key)
