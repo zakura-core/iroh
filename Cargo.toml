@@ -9,6 +9,11 @@ members = [
 ]
 resolver = "2"
 
+[patch.crates-io]
+noq = { git = "https://github.com/zakura-core/iroh-quinn", rev = "a0001b587c84d58a4f66d3ba8acdf789fc6588c7" }
+noq-proto = { git = "https://github.com/zakura-core/iroh-quinn", rev = "a0001b587c84d58a4f66d3ba8acdf789fc6588c7" }
+noq-udp = { git = "https://github.com/zakura-core/iroh-quinn", rev = "a0001b587c84d58a4f66d3ba8acdf789fc6588c7" }
+
 [profile.release]
 debug = true
 

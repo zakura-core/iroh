@@ -13,15 +13,16 @@ use std::{sync::Arc, time::Duration};
 /// `noq` types that are used in the public iroh API.
 // Each type is notated with the iroh type or noq type that uses it.
 pub use noq::{
-    AcceptBi,             // iroh::endpoint::Connection
-    AcceptUni,            // iroh::endpoint::Connection
-    AckFrequencyConfig,   // iroh::endpoint::quic::QuicTransportConfig
-    Closed,               // iroh::endpoint::WeakConnectionHandle
-    ClosedStream,         // iroh::protocol::AcceptError, noq::RecvStream, noq::SendStream
-    ConnectionError,      // iroh::endpoint::ConnectError
-    ConnectionStats,      // iroh::endpoint::Connection
-    Dir,                  // noq::StreamId
-    IdleTimeout,          // iroh::endpoint::quic::QuicTransportConfig
+    AcceptBi,           // iroh::endpoint::Connection
+    AcceptUni,          // iroh::endpoint::Connection
+    AckFrequencyConfig, // iroh::endpoint::quic::QuicTransportConfig
+    Closed,             // iroh::endpoint::WeakConnectionHandle
+    ClosedStream,       // iroh::protocol::AcceptError, noq::RecvStream, noq::SendStream
+    ConnectionError,    // iroh::endpoint::ConnectError
+    ConnectionStats,    // iroh::endpoint::Connection
+    Dir,                // noq::StreamId
+    IdleTimeout,        // iroh::endpoint::quic::QuicTransportConfig
+    MAX_QUEUED_CONNECTION_DATAGRAMS,
     MtuDiscoveryConfig,   // iroh::endpoint::quic::QuicTransportConfig
     OpenBi,               // iroh::endpoint::Connection
     OpenUni,              // iroh::endpoint::Connection
@@ -184,6 +185,19 @@ impl QuicTransportConfigBuilder {
         self
     }
 
+    /// Bound locally opened bidirectional streams through release of both halves'
+    /// protocol state, including stopped receivers awaiting a final offset.
+    pub fn max_concurrent_local_bidi_streams(mut self, value: VarInt) -> Self {
+        self.0.max_concurrent_local_bidi_streams(value);
+        self
+    }
+
+    /// Bound locally opened unidirectional streams through release of send state.
+    pub fn max_concurrent_local_uni_streams(mut self, value: VarInt) -> Self {
+        self.0.max_concurrent_local_uni_streams(value);
+        self
+    }
+
     /// Maximum duration of inactivity to accept before timing out the connection.
     ///
     /// The true idle timeout is the minimum of this and the peer's own max idle timeout. `None`
@@ -226,6 +240,23 @@ impl QuicTransportConfigBuilder {
         self
     }
 
+    /// Limit retained receive fragments per stream independently of payload
+    /// credit. Excess fragmentation closes the connection as a local resource
+    /// failure. `None` preserves the behavior without this extra limit.
+    /// A finite limit also gives retained stream fragments independent backing
+    /// allocations, including after compaction.
+    pub fn receive_fragment_limit(mut self, value: Option<std::num::NonZeroUsize>) -> Self {
+        self.0.receive_fragment_limit(value);
+        self
+    }
+
+    /// Bound retained packet-number spans, including gaps and loss history.
+    /// Exceeding the limit terminates the connection as a local resource failure.
+    pub fn packet_history_limit(mut self, value: Option<std::num::NonZeroUsize>) -> Self {
+        self.0.packet_history_limit(value);
+        self
+    }
+
     /// Maximum number of bytes the peer may transmit across all streams of a connection before
     /// becoming blocked.
     ///
@@ -237,14 +268,34 @@ impl QuicTransportConfigBuilder {
         self
     }
 
-    /// Maximum number of bytes to transmit to a peer without acknowledgment.
+    /// Maximum stream payload bytes retained for transmission.
     ///
-    /// Provides an upper bound on memory when communicating with peers that issue large amounts of
-    /// flow control credit. Endpoints that wish to handle large numbers of connections robustly
-    /// should take care to set this low enough to guarantee memory exhaustion does not occur if
-    /// every connection uses the entire window.
+    /// Acknowledged tails behind a missing prefix still consume this window until released.
+    /// This does not bound backing allocations retained by zero-copy writes. Use
+    /// `bounded_send_buffers` to bound those allocations, with separate allowances for metadata
+    /// and allocator overhead.
     pub fn send_window(mut self, value: u64) -> Self {
         self.0.send_window(value);
+        self
+    }
+
+    /// Copy outgoing stream data into independently owned blocks of at most 64 KiB.
+    ///
+    /// Requested payload storage is bounded by retained bytes plus two blocks per buffered
+    /// stream. Metadata and allocator overhead need separate allowances. Disabled by default
+    /// to preserve zero-copy `Bytes` writes.
+    pub fn bounded_send_buffers(mut self, value: bool) -> Self {
+        self.0.bounded_send_buffers(value);
+        self
+    }
+
+    /// Limit each send stream's retained acknowledgment and retransmission range sets.
+    ///
+    /// Exceeding the range count closes the connection as a local resource failure. Each set's
+    /// backing array can reserve up to twice the limit and releases storage when empty.
+    /// `None` preserves admission without this extra limit.
+    pub fn send_buffer_range_limit(mut self, value: Option<std::num::NonZeroUsize>) -> Self {
+        self.0.send_buffer_range_limit(value);
         self
     }
 
@@ -464,9 +515,9 @@ impl QuicTransportConfigBuilder {
     /// Setting this to any nonzero value will enable the Multipath Extension for QUIC,
     /// <https://datatracker.ietf.org/doc/draft-ietf-quic-multipath/>.
     ///
-    /// The value provided specifies the number maximum number of paths this endpoint may open
-    /// concurrently when multipath is negotiated. For any path to be opened, the remote must
-    /// enable multipath as well.
+    /// The value bounds retained path state and unused path authorization together.
+    /// Closing paths remain charged until their protocol state is discarded after draining.
+    /// For any path to be opened, the remote must enable multipath as well.
     ///
     /// Note: this method will ignore values less than the recommended 13 and will log a warning.
     pub fn max_concurrent_multipath_paths(mut self, max_concurrent: u32) -> Self {
