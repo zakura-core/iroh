@@ -3131,8 +3131,7 @@ checksum = "38bf9645c8b145698bb0b18a4637dcacbc421ea49bef2317e4fd8065a387cf21"
 [[package]]
 name = "noq"
 version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1e6c57353d26be91a242f0ec96073066c4481a03f6be874daafb18902394515"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688#5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688"
 dependencies = [
  "bytes",
  "cfg_aliases",
@@ -3153,8 +3152,7 @@ dependencies = [
 [[package]]
 name = "noq-proto"
 version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a46813e306c29c4f86357b6ffa39a8e1c97bb274b9a296a19a56d62e4111225"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688#5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688"
 dependencies = [
  "aes-gcm",
  "aws-lc-rs",
@@ -3184,8 +3182,7 @@ dependencies = [
 [[package]]
 name = "noq-udp"
 version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b56d621ed2c1773b5356ab39cc68c819f8d0103f7493d8661c4a5f5f8ea55f40"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688#5e33dcf5ab749e3a5d7dcfd9f2b989e7f5733688"
 dependencies = [
  "cfg_aliases",
  "libc",

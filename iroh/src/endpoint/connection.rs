@@ -150,6 +150,19 @@ impl Incoming {
             .map(|conn| Accepting::new(conn, self.ep))
     }
 
+    /// Accept with an application owner retained until the internal QUIC state
+    /// is destroyed. The owner must be reserved before accepting, including for
+    /// early data. Received chunks returned to callers need independent owners.
+    pub fn accept_owned(
+        self,
+        server_config: Option<Arc<ServerConfig>>,
+        owner: Box<dyn std::any::Any + Send + Sync>,
+    ) -> Result<Accepting, ConnectionError> {
+        self.inner
+            .accept_owned(server_config.map(|config| config.to_inner_arc()), owner)
+            .map(|conn| Accepting::new(conn, self.ep))
+    }
+
     /// Accepts this incoming connection using a custom configuration.
     ///
     /// Use the [`Endpoint::create_server_config_builder`] method to create a [`ServerConfigBuilder`]

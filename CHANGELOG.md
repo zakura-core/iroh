@@ -4,6 +4,13 @@ All notable changes to iroh will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Expose transport allocation controls and incoming queue limits. Incoming and outgoing connections
+  can carry a resource owner through handshake failure and final transport cleanup.
+
+## Unreleased
+
 - Allow `max_remote_nat_traversal_addresses(0)` to disable NAT traversal,
   including candidate-address exchange and peer-directed UDP probes, in
   `1.1.0-rc.1`. Direct connections remain available.
@@ -3156,5 +3163,4 @@ All notable changes to iroh will be documented in this file.
 - On_collection doesn't need to be FnMut ([#136](https://github.com/n0-computer/iroh/issues/136)) - ([eac7b65](https://github.com/n0-computer/iroh/commit/eac7b65a6760c0cf55d455ca5a7e9e523698c7a1))
 - Allow older rust version ([#142](https://github.com/n0-computer/iroh/issues/142)) - ([f3086a9](https://github.com/n0-computer/iroh/commit/f3086a9576fdc0cdfbd6b0646745bec9e91f7d60))
 - Use our own bao crate - ([659d2d2](https://github.com/n0-computer/iroh/commit/659d2d22254ea1d3f185ec0d4c8be4e7bf4374df))
-
 

@@ -105,13 +105,13 @@ pub use self::{
         ConnectionClose, ConnectionError, ConnectionStats, Controller, ControllerFactory,
         ControllerMetrics, CryptoError, DecryptedInitial, Dir, ExportKeyingMaterialError,
         FrameStats, FrameType, HandshakeTokenKey, HeaderKey, IdleTimeout, IncomingAlpns, Keys,
-        MtuDiscoveryConfig, OpenBi, OpenUni, PacketKey, PathId, PathStats, QuicConnectError,
-        QuicTransportConfig, QuicTransportConfigBuilder, ReadDatagram, ReadError, ReadExactError,
-        ReadToEndError, RecvStream, ResetError, RttEstimator, SendDatagram, SendDatagramError,
-        SendStream, ServerConfig, ServerConfigBuilder, Side, StoppedError, StreamId, TimeSource,
-        TokenLog, TokenReuseError, TransportError, TransportErrorCode, TransportParameters,
-        UdpStats, UnorderedRecvStream, UnsupportedVersion, ValidationTokenConfig, VarInt,
-        VarIntBoundsExceeded, WriteError,
+        MAX_QUEUED_CONNECTION_DATAGRAMS, MtuDiscoveryConfig, OpenBi, OpenUni, PacketKey, PathId,
+        PathStats, QuicConnectError, QuicTransportConfig, QuicTransportConfigBuilder, ReadDatagram,
+        ReadError, ReadExactError, ReadToEndError, RecvStream, ResetError, RttEstimator,
+        SendDatagram, SendDatagramError, SendStream, ServerConfig, ServerConfigBuilder, Side,
+        StoppedError, StreamId, TimeSource, TokenLog, TokenReuseError, TransportError,
+        TransportErrorCode, TransportParameters, UdpStats, UnorderedRecvStream, UnsupportedVersion,
+        ValidationTokenConfig, VarInt, VarIntBoundsExceeded, WriteError,
     },
 };
 #[cfg(not(wasm_browser))]
@@ -130,6 +130,7 @@ pub struct Builder {
     secret_key: Option<SecretKey>,
     alpn_protocols: Vec<Vec<u8>>,
     transport_config: QuicTransportConfig,
+    incoming_queue_limits: Option<(usize, u64, u64)>,
     keylog: bool,
     address_lookup: Vec<Box<dyn DynAddressLookupBuilder>>,
     address_lookup_user_data: Option<UserData>,
@@ -200,6 +201,7 @@ impl Builder {
             secret_key: Default::default(),
             alpn_protocols: Default::default(),
             transport_config: QuicTransportConfig::default(),
+            incoming_queue_limits: None,
             keylog: Default::default(),
             address_lookup: Default::default(),
             address_lookup_user_data: Default::default(),
@@ -247,6 +249,7 @@ impl Builder {
             client_config: tls_config.make_client_config(self.keylog)?,
             tls_config,
             transport_config: self.transport_config.clone(),
+            incoming_queue_limits: self.incoming_queue_limits,
             token_key,
             token_store: Arc::new(noq::TokenMemoryCache::default()),
         };
@@ -668,6 +671,21 @@ impl Builder {
     /// and maintaining direct connections.
     pub fn transport_config(mut self, transport_config: QuicTransportConfig) -> Self {
         self.transport_config = transport_config;
+        self
+    }
+
+    /// Bound the endpoint's queue before connections are accepted.
+    ///
+    /// The byte limits exclude each connection's first datagram. Account for
+    /// those separately using `max_incoming`. Accepted handshakes no longer
+    /// occupy this queue and require independent admission and memory limits.
+    pub fn incoming_queue_limits(
+        mut self,
+        max_incoming: usize,
+        per_incoming_bytes: u64,
+        total_bytes: u64,
+    ) -> Self {
+        self.incoming_queue_limits = Some((max_incoming, per_incoming_bytes, total_bytes));
         self
     }
 
@@ -1095,6 +1113,37 @@ impl Endpoint {
         alpn: &[u8],
         options: ConnectOptions,
     ) -> Result<Connecting, ConnectWithOptsError> {
+        self.connect_with_optional_owner(endpoint_addr, alpn, options, None)
+            .await
+    }
+
+    /// Start a connection while retaining an application owner until its internal
+    /// QUIC state is destroyed. Reserve before calling. Failed address resolution
+    /// releases the owner without creating QUIC state. Chunks returned to callers
+    /// can outlive the internal state and require independent ownership.
+    #[instrument(name = "connect", skip_all, fields(
+        me = %self.id().fmt_short(),
+        remote = tracing::field::Empty,
+        alpn = %String::from_utf8_lossy(alpn).to_string(),
+    ))]
+    pub async fn connect_with_owner(
+        &self,
+        endpoint_addr: impl Into<EndpointAddr>,
+        alpn: &[u8],
+        options: ConnectOptions,
+        owner: Box<dyn std::any::Any + Send + Sync>,
+    ) -> Result<Connecting, ConnectWithOptsError> {
+        self.connect_with_optional_owner(endpoint_addr, alpn, options, Some(owner))
+            .await
+    }
+
+    async fn connect_with_optional_owner(
+        &self,
+        endpoint_addr: impl Into<EndpointAddr>,
+        alpn: &[u8],
+        options: ConnectOptions,
+        owner: Option<Box<dyn std::any::Any + Send + Sync>>,
+    ) -> Result<Connecting, ConnectWithOptsError> {
         if self.is_closed() {
             return Err(e!(ConnectWithOptsError::EndpointClosed));
         }
@@ -1146,10 +1195,19 @@ impl Endpoint {
 
         let dest_addr = mapped_addr.private_socket_addr();
         let server_name = &tls::name::encode(endpoint_id);
-        let connect =
-            self.inner
-                .noq_endpoint()
-                .connect_with(client_config, dest_addr, server_name)?;
+        let connect = match owner {
+            Some(owner) => self.inner.noq_endpoint().connect_with_owner(
+                client_config,
+                dest_addr,
+                server_name,
+                owner,
+            )?,
+            None => {
+                self.inner
+                    .noq_endpoint()
+                    .connect_with(client_config, dest_addr, server_name)?
+            }
+        };
 
         Ok(Connecting::new(connect, self.clone(), endpoint_id))
     }

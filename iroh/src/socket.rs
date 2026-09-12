@@ -242,6 +242,7 @@ pub(crate) struct StaticConfig {
     #[debug("Arc<dyn TokenStore>")]
     pub(crate) token_store: Arc<dyn TokenStore>,
     pub(crate) transport_config: QuicTransportConfig,
+    pub(crate) incoming_queue_limits: Option<(usize, u64, u64)>,
 }
 
 impl StaticConfig {
@@ -255,6 +256,11 @@ impl StaticConfig {
         let mut inner =
             noq::ServerConfig::new(Arc::new(quic_server_config), self.token_key.clone());
         inner.transport_config(self.transport_config.to_inner_arc());
+        if let Some((count, per_incoming, total)) = self.incoming_queue_limits {
+            inner.max_incoming(count);
+            inner.incoming_buffer_size(per_incoming);
+            inner.incoming_buffer_size_total(total);
+        }
         inner
     }
 
@@ -2162,6 +2168,7 @@ mod tests {
             token_key: Arc::new(RustlsTokenKey::new(rng, &crypto_provider).unwrap()),
             token_store: Arc::new(noq::TokenMemoryCache::default()),
             transport_config: QuicTransportConfig::default(),
+            incoming_queue_limits: None,
         };
         let server_config = static_config.create_server_config(vec![]);
         Options {
@@ -2577,6 +2584,7 @@ mod tests {
             token_key: Arc::new(RustlsTokenKey::new(&mut rand::rng(), &crypto_provider).unwrap()),
             token_store: Arc::new(noq::TokenMemoryCache::default()),
             transport_config: QuicTransportConfig::default(),
+            incoming_queue_limits: None,
         };
         let server_config = static_config.create_server_config(vec![ALPN.to_vec()]);
 
