@@ -3131,7 +3131,7 @@ checksum = "38bf9645c8b145698bb0b18a4637dcacbc421ea49bef2317e4fd8065a387cf21"
 [[package]]
 name = "noq"
 version = "1.2.0"
-source = "git+https://github.com/zakura-core/iroh-quinn?rev=22c65143b887c2d344a09a3797510d742f34c5fa#22c65143b887c2d344a09a3797510d742f34c5fa"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=efef9a4ea4ef9daeab7d14216fe0989b6662bd70#efef9a4ea4ef9daeab7d14216fe0989b6662bd70"
 dependencies = [
  "bytes",
  "cfg_aliases",
@@ -3152,7 +3152,7 @@ dependencies = [
 [[package]]
 name = "noq-proto"
 version = "1.2.0"
-source = "git+https://github.com/zakura-core/iroh-quinn?rev=22c65143b887c2d344a09a3797510d742f34c5fa#22c65143b887c2d344a09a3797510d742f34c5fa"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=efef9a4ea4ef9daeab7d14216fe0989b6662bd70#efef9a4ea4ef9daeab7d14216fe0989b6662bd70"
 dependencies = [
  "aes-gcm",
  "aws-lc-rs",
@@ -3182,7 +3182,7 @@ dependencies = [
 [[package]]
 name = "noq-udp"
 version = "1.2.0"
-source = "git+https://github.com/zakura-core/iroh-quinn?rev=22c65143b887c2d344a09a3797510d742f34c5fa#22c65143b887c2d344a09a3797510d742f34c5fa"
+source = "git+https://github.com/zakura-core/iroh-quinn?rev=efef9a4ea4ef9daeab7d14216fe0989b6662bd70#efef9a4ea4ef9daeab7d14216fe0989b6662bd70"
 dependencies = [
  "cfg_aliases",
  "libc",
