@@ -108,6 +108,8 @@ pub struct RouterBuilder {
     protocols: ProtocolMap,
     #[debug(skip)]
     incoming_filter: Option<IncomingFilter>,
+    #[debug(skip)]
+    incoming_admission: Option<IncomingAdmission>,
 }
 
 #[allow(missing_docs)]
@@ -213,6 +215,18 @@ pub enum IncomingFilterOutcome {
 /// See [`RouterBuilder::incoming_filter`] for more details.
 pub type IncomingFilter =
     Arc<dyn Fn(&crate::endpoint::Incoming) -> IncomingFilterOutcome + Send + Sync + 'static>;
+
+/// Reserves an owner before the router constructs an incoming QUIC connection.
+///
+/// Return `None` to refuse the attempt. An accepted owner remains with transport
+/// state through handshake failure, cancellation and final connection cleanup.
+/// This callback runs after the incoming filter, before spawning handshake work.
+pub type IncomingAdmission = Arc<
+    dyn Fn(&crate::endpoint::Incoming) -> Option<Box<dyn std::any::Any + Send + Sync>>
+        + Send
+        + Sync
+        + 'static,
+>;
 
 /// Handler for incoming connections.
 ///
@@ -453,6 +467,7 @@ impl RouterBuilder {
             endpoint,
             protocols: ProtocolMap::default(),
             incoming_filter: None,
+            incoming_admission: None,
         }
     }
 
@@ -471,6 +486,15 @@ impl RouterBuilder {
     /// [`Incoming::decrypt`]: crate::endpoint::Incoming::decrypt
     pub fn incoming_filter(mut self, filter: IncomingFilter) -> Self {
         self.incoming_filter = Some(filter);
+        self
+    }
+
+    /// Reserves transport ownership before accepting each incoming connection.
+    ///
+    /// The callback cannot rely on a completed TLS handshake or authenticated
+    /// identity. Raw incoming packets queued before it runs need separate bounds.
+    pub fn incoming_admission(mut self, admission: IncomingAdmission) -> Self {
+        self.incoming_admission = Some(admission);
         self
     }
 
@@ -508,6 +532,7 @@ impl RouterBuilder {
 
         let protocols = Arc::new(self.protocols);
         let incoming_filter = self.incoming_filter;
+        let incoming_admission = self.incoming_admission;
         self.endpoint.set_alpns(alpns);
 
         let mut join_set = JoinSet::new();
@@ -584,11 +609,20 @@ impl RouterBuilder {
                             }
                         }
 
+                        let owner = if let Some(admit) = &incoming_admission {
+                            let Some(owner) = admit(&incoming) else {
+                                incoming.refuse();
+                                continue;
+                            };
+                            Some(owner)
+                        } else {
+                            None
+                        };
                         let protocols = protocols.clone();
                         let token = handler_cancel_token.child_token();
                         let span = info_span!("router.accept", me=%endpoint.id().fmt_short(), remote=Empty, alpn=Empty);
                         join_set.spawn(async move {
-                            token.run_until_cancelled(handle_connection(incoming, protocols)).await
+                            token.run_until_cancelled(handle_connection(incoming, protocols, owner)).await
                         }.instrument(span));
                     },
                 }
@@ -622,8 +656,16 @@ impl RouterBuilder {
     }
 }
 
-async fn handle_connection(incoming: crate::endpoint::Incoming, protocols: Arc<ProtocolMap>) {
-    let mut accepting = match incoming.accept() {
+async fn handle_connection(
+    incoming: crate::endpoint::Incoming,
+    protocols: Arc<ProtocolMap>,
+    owner: Option<Box<dyn std::any::Any + Send + Sync>>,
+) {
+    let accepted = match owner {
+        Some(owner) => incoming.accept_owned(None, owner),
+        None => incoming.accept(),
+    };
+    let mut accepting = match accepted {
         Ok(conn) => conn,
         Err(err) => {
             warn!("Ignoring connection: accepting failed: {err:#}");
