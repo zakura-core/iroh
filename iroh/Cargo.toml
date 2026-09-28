@@ -1,18 +1,19 @@
 [package]
-name = "iroh"
-version = "1.1.0"
+name = "zakura-iroh"
+version = "1.1.0-rc.2"
 edition = "2024"
 readme = "README.md"
-description = "p2p quic connections dialed by public key"
+description = "Zakura compatibility fork: p2p quic connections dialed by public key"
 license = "MIT OR Apache-2.0"
 authors = ["dignifiedquire <me@dignifiedquire.com>", "n0 team"]
-repository = "https://github.com/n0-computer/iroh"
+repository = "https://github.com/zakura-core/iroh"
 keywords = ["quic", "networking", "holepunching", "p2p"]
 
 # Sadly this also needs to be updated in .github/workflows/ci.yml
 rust-version = "1.91"
 
 [lib]
+name = "iroh"
 # We need "cdylib" to actually generate .wasm files when we run with --target=wasm32-unknown-unknown.
 # It would be nice if we could make this target-dependent, but we can't (yet): https://github.com/rust-lang/cargo/issues/12260
 crate-type = ["lib", "cdylib"]
@@ -31,9 +32,9 @@ derive_more = { version = "2.0.1", features = ["debug", "display", "from", "try_
 ed25519-dalek = { version = "2.2", features = ["serde", "rand_core", "zeroize", "pkcs8", "pem"] }
 http = "1"
 ipnet = "2"
-iroh-base = { version = "1.1.0", default-features = false, features = ["key", "relay"], path = "../iroh-base" }
-iroh-dns = { version = "1.1.0", path = "../iroh-dns" }
-iroh-relay = { version = "1.1.0", path = "../iroh-relay", default-features = false }
+iroh-base = { package = "zakura-iroh-base", version = "=1.1.0-rc.2", default-features = false, features = ["key", "relay"], path = "../iroh-base" }
+iroh-dns = { package = "zakura-iroh-dns", version = "=1.1.0-rc.2", path = "../iroh-dns" }
+iroh-relay = { package = "zakura-iroh-relay", version = "=1.1.0-rc.2", path = "../iroh-relay", default-features = false }
 n0-future = "0.3"
 n0-error = "1.0.0"
 n0-watcher = "1.0.0"
@@ -120,7 +121,7 @@ tokio = { version = "1", features = [
     "test-util",
 ] }
 serde_json = "1"
-iroh-relay = { version = "1.1.0", path = "../iroh-relay", default-features = false, features = ["test-utils", "server"] }
+iroh-relay = { package = "zakura-iroh-relay", version = "=1.1.0-rc.2", path = "../iroh-relay", default-features = false, features = ["test-utils", "server"] }
 n0-tracing-test = "0.3"
 clap = { version = "4", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = [
@@ -128,7 +129,7 @@ tracing-subscriber = { version = "0.3", features = [
 ] }
 indicatif = { version = "0.18", features = ["tokio"] }
 parse-size = { version = "1.1.0", features = ['std'] }
-iroh-base = { version = "1.1.0", default-features = false, features = ["key", "relay"], path = "../iroh-base" }
+iroh-base = { package = "zakura-iroh-base", version = "=1.1.0-rc.2", default-features = false, features = ["key", "relay"], path = "../iroh-base" }
 console = { version = "0.16" }
 
 # wasm-in-browser test/dev dependencies

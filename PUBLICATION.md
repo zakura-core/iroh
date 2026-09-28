@@ -1,58 +1,73 @@
-# Networking package preparation
+# Networking package publication
 
-The checked-in Iroh package identities remain unchanged for source integration.
-The preparation script emits a separate, reproducible workspace from a committed
-revision. It changes package metadata and dependency aliases without changing
-Rust source or modifying the checkout. It cannot publish anything.
+The maintained workspace contains `zakura-iroh`, `zakura-iroh-base`,
+`zakura-iroh-dns`, and `zakura-iroh-relay` directly. Git consumers and registry
+releases use the same manifests. There is no generated package workspace or
+separate staging branch.
 
-## Proposed packages
+The public library names and dependency aliases remain `iroh`, `iroh_base`,
+`iroh_dns`, and `iroh_relay`. Existing Rust imports do not change. The DNS
+server and benchmark packages are not published.
 
-All four packages use `1.1.0-rc.1`, derived from upstream Iroh 1.1.0. Publish in
-this dependency order only after explicit approval:
+## Verify the source
+
+All four packages use `1.1.0-rc.2` and exact sibling requirements. Previously
+published versions must not be overwritten. From the reviewed checkout, run:
+
+```sh
+cargo metadata --locked --format-version 1 > /tmp/zakura-iroh-metadata.json
+cargo check --locked -p zakura-iroh --lib --no-default-features --features tls-ring
+cargo tree --locked -i zakura-iroh-base
+cargo tree --locked -i noq
+```
+
+The root transport patches are temporary. Cargo does not inherit a dependency's
+patch table, so every consuming workspace must provide the same transport
+patches until compatible registry releases exist. Successful Git qualification
+does not establish that the packages can be published or built from crates.io.
+
+## Package and publish
+
+Before publication, resolve the transport dependency's release route, replace
+its Git patches with compatible registry versions, and refresh `Cargo.lock`.
+Recheck version availability and package ownership. Then package and verify the
+complete family from a clean, committed checkout:
+
+```sh
+cargo package --locked -p zakura-iroh-base -p zakura-iroh-dns \
+  -p zakura-iroh-relay -p zakura-iroh
+```
+
+This packages and rebuilds the archives locally. It does not upload them.
+Publication requires explicit approval. Publish the dependency family in order:
 
 1. `zakura-iroh-base`
 2. `zakura-iroh-dns`
 3. `zakura-iroh-relay`
 4. `zakura-iroh`
 
-The DNS server and benchmark packages are outside this set and are marked
-`publish = false` in the prepared workspace. Existing license files and upstream
-authorship are retained. Public library names and dependency aliases remain
-`iroh`, `iroh_base`, `iroh_dns`, and `iroh_relay`; package names identify the fork.
-The manifests keep upstream noq 1.2 and published Dalek dependencies.
-The relay package pins LRU to 0.18.3 so consumers without this workspace
-lockfile cannot select 0.18.4's faulty `retain` implementation.
+The checked-in manifests retain published Dalek dependencies and pin relay LRU
+to `0.18.3`. Preserve those constraints when publishing. Review authentication
+compatibility and run consuming workspace checks before removing Git patches.
 
-## Prepare and verify
+## Consumer wiring
 
-Run with Python 3.12 or newer, using a destination that does not already exist:
+Consumers keep registry dependency declarations. For example:
 
-```sh
-python3 scripts/prepare-zakura-packages.py --revision HEAD --output /tmp/zakura-iroh-rc1
-cd /tmp/zakura-iroh-rc1
-cargo metadata --format-version 1 > metadata.json
-cargo package -p zakura-iroh-base -p zakura-iroh-dns -p zakura-iroh-relay -p zakura-iroh
+```toml
+[workspace.dependencies.iroh]
+package = "zakura-iroh"
+version = "=1.1.0-rc.2"
+default-features = false
+features = ["tls-ring"]
 ```
 
-The last command packages and rebuilds the archives locally; it does not upload
-them. Cargo stages the sibling packages together, so this validation does not
-require reserving registry names. `zakura-package-plan.json` records the source
-commit and hashes every Rust file. Keep this evidence with the built archives.
+Before publication, use root `[patch.crates-io]` entries for all four packages,
+pinned to one reviewed commit of this maintained branch. Patch the complete
+transport family in the consumer's root as well. No package renaming is needed.
 
-`zakura-consumer.toml` is the post-publication dependency template for Zakura.
-Only after all four packages are available, replace its `iroh` workspace
-dependency with the template and remove the four old Iroh root Git patches.
-Refresh the lockfile, verify the complete family and features with Cargo
-metadata and inverse trees, then rerun packaging, semver and application tests.
-Check that BIP32 and the Zcash cryptographic dependency versions remain unchanged.
-
-## Before publication
-
-The four package names are already owned and `1.1.0-rc.0` is published.
-Recheck version availability and owners before an authorized publication.
-Preparation does not authorize a registry upload or a release tag.
-
-Archive validation does not replace cargo-vet coverage of the new dependency
-graph, review of authentication compatibility, or full-node interoperability
-checks. Keep the integration draft until those gates are satisfied. No blanket
-trust or audit exemption is introduced by this preparation.
+Only after all required registry releases are available, remove the Git
+patches, refresh the lockfile, and verify metadata and inverse dependency trees.
+Rerun packaging, semver, and application checks. Keep draft integration work
+open until these gates pass. Publication introduces no blanket cargo-vet trust
+or audit exemption.

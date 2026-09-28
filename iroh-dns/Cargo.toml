@@ -1,11 +1,11 @@
 [package]
-name = "iroh-dns"
-version = "1.1.0"
+name = "zakura-iroh-dns"
+version = "1.1.0-rc.2"
 edition = "2024"
-description = "DNS-based endpoint discovery for iroh"
+description = "Zakura compatibility fork: DNS-based endpoint discovery for iroh"
 license = "MIT OR Apache-2.0"
 authors = ["n0 team"]
-repository = "https://github.com/n0-computer/iroh"
+repository = "https://github.com/zakura-core/iroh"
 keywords = ["networking", "pkarr", "dns", "iroh"]
 rust-version = "1.91"
 
@@ -15,7 +15,7 @@ workspace = true
 [dependencies]
 arc-swap = "1.9.1"
 derive_more = { version = "2.0.1", features = ["debug"] }
-iroh-base = { version = "1.1.0", path = "../iroh-base", default-features = false, features = ["key", "relay"] }
+iroh-base = { package = "zakura-iroh-base", version = "=1.1.0-rc.2", path = "../iroh-base", default-features = false, features = ["key", "relay"] }
 n0-error = "1.0.0"
 n0-future = "0.3"
 portable-atomic = "1"
@@ -56,3 +56,6 @@ allowed_external_types = [
     # only type alias
     "futures_lite::future::Boxed",
 ]
+
+[lib]
+name = "iroh_dns"

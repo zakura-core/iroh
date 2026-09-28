@@ -194,10 +194,10 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           CARGO_NDK_TARGET: ${{ matrix.target }}
         run: |
-          cargo ndk test --locked --no-run -p iroh-base --all-features
-          cargo ndk test --locked --no-run -p iroh-dns --features tls-ring
-          cargo ndk test --locked --no-run -p iroh-relay --features tls-ring,metrics
-          cargo ndk test --locked --no-run -p iroh --features tls-ring,metrics,portmapper,test-utils
+          cargo ndk test --locked --no-run -p zakura-iroh-base --all-features
+          cargo ndk test --locked --no-run -p zakura-iroh-dns --features tls-ring
+          cargo ndk test --locked --no-run -p zakura-iroh-relay --features tls-ring,metrics
+          cargo ndk test --locked --no-run -p zakura-iroh --features tls-ring,metrics,portmapper,test-utils
 
       - name: Run workspace tests on Android emulator
         if: matrix.target == 'x86_64-linux-android'
@@ -250,10 +250,10 @@ jobs:
             # catches what it could not.
             adb shell 'rm -rf /data/local/tmp/*' || true
             adb shell df -h /data
-            cargo ndk test --locked -p iroh-base --all-features
-            cargo ndk test --locked -p iroh-dns --features tls-ring
-            cargo ndk test --locked -p iroh-relay --features tls-ring,metrics
-            cargo ndk test --locked -p iroh --features tls-ring,metrics,portmapper,test-utils
+            cargo ndk test --locked -p zakura-iroh-base --all-features
+            cargo ndk test --locked -p zakura-iroh-dns --features tls-ring
+            cargo ndk test --locked -p zakura-iroh-relay --features tls-ring,metrics
+            cargo ndk test --locked -p zakura-iroh --features tls-ring,metrics,portmapper,test-utils
 
   cross_test:
     name: Cross Test
@@ -342,13 +342,13 @@ jobs:
         uses: bytecodealliance/actions/wasm-tools/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
 
       - name: wasm32 build (iroh-base)
-        run: cargo build --locked --target wasm32-unknown-unknown -p iroh-base --all-features
+        run: cargo build --locked --target wasm32-unknown-unknown -p zakura-iroh-base --all-features
 
       - name: wasm32 build (iroh-relay)
-        run: cargo build --locked --target wasm32-unknown-unknown -p iroh-relay
+        run: cargo build --locked --target wasm32-unknown-unknown -p zakura-iroh-relay
 
       - name: wasm32 build (iroh)
-        run: cargo build --locked --target wasm32-unknown-unknown -p iroh
+        run: cargo build --locked --target wasm32-unknown-unknown -p zakura-iroh
 
       # If the Wasm file contains any 'import "env"' declarations, then
       # some non-Wasm-compatible code made it into the final code.
@@ -361,7 +361,7 @@ jobs:
           ! wasm-tools print --skeleton target/wasm32-unknown-unknown/debug/iroh.wasm | grep 'import "env"'
 
       - name: Run integration test in wasm
-        run: cargo test --locked -p iroh --test integration --target=wasm32-unknown-unknown
+        run: cargo test --locked -p zakura-iroh --test integration --target=wasm32-unknown-unknown
 
   check_semver:
     needs: pick-runner
@@ -383,7 +383,7 @@ jobs:
         # uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
         uses: n0-computer/cargo-semver-checks-action@b49de9133f8849bb51cae32c6bdeb19a5c37e61f # feat-baseline
         with:
-          package: iroh, iroh-base, iroh-dns, iroh-dns-server, iroh-relay
+          package: zakura-iroh, zakura-iroh-base, zakura-iroh-dns, iroh-dns-server, zakura-iroh-relay
 
   check_external_types:
     timeout-minutes: 30
@@ -525,8 +525,8 @@ jobs:
         run: |
           fail=0
           for dep in portmapper igd-next swarm-discovery ring aws-lc-rs; do
-            echo    "cargo tree --locked -p iroh --no-default-features --edges normal --target all -i $dep";
-            output=$(cargo tree --locked -p iroh --no-default-features --edges normal --target all -i "$dep" 2>&1) || true
+            echo    "cargo tree --locked -p zakura-iroh --no-default-features --edges normal --target all -i $dep";
+            output=$(cargo tree --locked -p zakura-iroh --no-default-features --edges normal --target all -i "$dep" 2>&1) || true
             if ! echo "$output" | grep -qE "(nothing to print|did not match any packages)"; then
               echo "ERROR: $dep should not be in the dependency tree without its feature"
               echo "$output"
