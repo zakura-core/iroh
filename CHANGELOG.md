@@ -4,6 +4,11 @@ All notable changes to iroh will be documented in this file.
 
 ## Unreleased
 
+- Add connection owners and router admission before handshake construction,
+  retaining capacity until internal transport cleanup finishes. Maintain the
+  four `zakura-iroh*` packages directly at `1.1.0-rc.2`, preserving Rust library
+  names and removing the generated package staging step.
+
 - Allow `max_remote_nat_traversal_addresses(0)` to disable NAT traversal,
   including candidate-address exchange and peer-directed UDP probes, in
   `1.1.0-rc.1`. Direct connections remain available.

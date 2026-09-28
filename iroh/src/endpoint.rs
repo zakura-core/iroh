@@ -1095,6 +1095,37 @@ impl Endpoint {
         alpn: &[u8],
         options: ConnectOptions,
     ) -> Result<Connecting, ConnectWithOptsError> {
+        self.connect_with_optional_owner(endpoint_addr, alpn, options, None)
+            .await
+    }
+
+    /// Start a connection while retaining an application owner until its internal
+    /// QUIC state is destroyed. Reserve before calling. Failed address resolution
+    /// releases the owner without creating QUIC state. Chunks returned to callers
+    /// can outlive the internal state and require independent ownership.
+    #[instrument(name = "connect", skip_all, fields(
+        me = %self.id().fmt_short(),
+        remote = tracing::field::Empty,
+        alpn = %String::from_utf8_lossy(alpn).to_string(),
+    ))]
+    pub async fn connect_with_owner(
+        &self,
+        endpoint_addr: impl Into<EndpointAddr>,
+        alpn: &[u8],
+        options: ConnectOptions,
+        owner: Box<dyn std::any::Any + Send + Sync>,
+    ) -> Result<Connecting, ConnectWithOptsError> {
+        self.connect_with_optional_owner(endpoint_addr, alpn, options, Some(owner))
+            .await
+    }
+
+    async fn connect_with_optional_owner(
+        &self,
+        endpoint_addr: impl Into<EndpointAddr>,
+        alpn: &[u8],
+        options: ConnectOptions,
+        owner: Option<Box<dyn std::any::Any + Send + Sync>>,
+    ) -> Result<Connecting, ConnectWithOptsError> {
         if self.is_closed() {
             return Err(e!(ConnectWithOptsError::EndpointClosed));
         }
@@ -1146,10 +1177,19 @@ impl Endpoint {
 
         let dest_addr = mapped_addr.private_socket_addr();
         let server_name = &tls::name::encode(endpoint_id);
-        let connect =
-            self.inner
-                .noq_endpoint()
-                .connect_with(client_config, dest_addr, server_name)?;
+        let connect = match owner {
+            Some(owner) => self.inner.noq_endpoint().connect_with_owner(
+                client_config,
+                dest_addr,
+                server_name,
+                owner,
+            )?,
+            None => {
+                self.inner
+                    .noq_endpoint()
+                    .connect_with(client_config, dest_addr, server_name)?
+            }
+        };
 
         Ok(Connecting::new(connect, self.clone(), endpoint_id))
     }

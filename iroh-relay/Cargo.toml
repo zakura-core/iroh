@@ -1,16 +1,17 @@
 [package]
-name = "iroh-relay"
-version = "1.1.0"
+name = "zakura-iroh-relay"
+version = "1.1.0-rc.2"
 edition = "2024"
 readme = "README.md"
-description = "Iroh's relay server and client"
+description = "Zakura compatibility fork: Iroh's relay server and client"
 license = "MIT OR Apache-2.0"
 authors = ["n0 team"]
-repository = "https://github.com/n0-computer/iroh"
+repository = "https://github.com/zakura-core/iroh"
 keywords = ["networking", "holepunching", "p2p"]
 rust-version = "1.91"
 
 [lib]
+name = "iroh_relay"
 # We need "cdylib" to actually generate .wasm files when we run with --target=wasm32-unknown-unknown.
 # It would be nice if we could make this target-dependent, but we can't (yet): https://github.com/rust-lang/cargo/issues/12260
 crate-type = ["lib", "cdylib"]
@@ -33,8 +34,8 @@ http = "1"
 http-body-util = "0.1.0"
 hyper = { version = "1", features = ["server", "client", "http1"] }
 hyper-util = "0.1.1"
-iroh-base = { version = "1.1.0", path = "../iroh-base", default-features = false, features = ["key", "relay"] }
-iroh-dns = { version = "1.1.0", path = "../iroh-dns" }
+iroh-base = { package = "zakura-iroh-base", version = "=1.1.0-rc.2", path = "../iroh-base", default-features = false, features = ["key", "relay"] }
+iroh-dns = { package = "zakura-iroh-dns", version = "=1.1.0-rc.2", path = "../iroh-dns" }
 iroh-metrics = { version = "1.0.1", default-features = false }
 # Keep fresh consumers on the reviewed release; 0.18.4 has a faulty retain implementation.
 lru = "=0.18.3"
