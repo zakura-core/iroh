@@ -1,5 +1,5 @@
 ### Base image for iroh-relay and iroh-dns-server
-FROM alpine:latest AS base
+FROM alpine:3.24 AS base
 RUN apk update && apk add ca-certificates && update-ca-certificates
 
 ### Target image

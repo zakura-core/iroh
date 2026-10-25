@@ -1,8 +1,8 @@
-FROM rust:alpine AS chef
+FROM rust:1.98-alpine AS chef
 
 RUN update-ca-certificates
 RUN apk add --no-cache musl-dev openssl-dev pkgconfig
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /iroh
 
 FROM chef AS planner
@@ -17,17 +17,17 @@ RUN apk add --no-cache musl-dev openssl-dev pkgconfig
 
 COPY --from=planner /iroh/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --locked --recipe-path recipe.json
 
 WORKDIR /iroh
 
 # copy entire workspace
 COPY . .
 
-RUN cargo build --release --all-features
+RUN cargo build --release --locked --all-features
 
 ### Target image
-FROM alpine:latest AS iroh-relay
+FROM alpine:3.24 AS iroh-relay
 
 RUN apk update && apk add ca-certificates && update-ca-certificates
 
@@ -46,7 +46,7 @@ ENTRYPOINT ["/iroh-relay"]
 CMD [""]
 
 ### Target image
-FROM alpine:latest AS iroh-dns-server
+FROM alpine:3.24 AS iroh-dns-server
 
 RUN apk update && apk add ca-certificates && update-ca-certificates
 
